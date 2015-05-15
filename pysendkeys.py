@@ -12,15 +12,17 @@ import sys
 import termios
 import tty
 import time
-
 import socket
+import json
+import struct
 
 
-
+KEY_CMD = 1
+START_CMD = 2
 
 def log(s):
     with open("log", "a") as f:
-        f.write("%s\n" % s)
+        f.write("%s\n" % str(s))
 
 
 def os_write_all(fd, data):
@@ -29,28 +31,9 @@ def os_write_all(fd, data):
         n = os.write(fd, data)
         data = data[n:]
 
-
-parser = argparse.ArgumentParser()
-parser.add_argument("-p", "--port", dest="port", default=14412)
-parser.add_argument("-i", "--ip", dest="ip", default="localhost")
-
-subparsers = parser.add_subparsers(dest="action", title="Action")
-
-server_parser=subparsers.add_parser('server', help="Server mode")
-server_parser.add_argument("command", metavar="COMMAND [ARGUMENTS ...]", nargs=argparse.REMAINDER)
-
-
-args = parser.parse_args()
-print "%r" % args
-
-
 class PtyServer(object):
-    def __init__(self, args):
-        self.command = args.command
-        self.master_fd = None
-
-        self._setup()
-        self._open_server(args.ip, args.port)
+    def __init__(self):
+        pass
     
     def _open_server(self, ip, port):
         self.srv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -113,6 +96,7 @@ class PtyServer(object):
 
     def _handle_client_command(self, command, args):
         if command == "send-keys":
+            log("sending %r" % args)
             os_write_all(self.master_fd, args)
         elif command == "run":
             self.start_process(args)
@@ -130,7 +114,13 @@ class PtyServer(object):
         cur_buf = ""
         self.client_bufs[conn] = cur_buf
     
-    def run(self):
+    def run(self, args):
+        self.command = args.command
+        self.master_fd = None
+
+        self._setup()
+        self._open_server(args.ip, args.port)
+
         self.start_process("/bin/cat")
         try:
             done = False
@@ -162,11 +152,56 @@ class PtyServer(object):
         finally:
             self._cleanup()
 
-srv=PtyServer(args)
-srv.run()
-sys.exit(0)
+class PtyClient(object):
+    def __init__(self):
+        pass
 
-os.close(master_fd)
+    def connect(self, dst, port):
+        try:
+            self.sock = socket.socket(socket.AF_INET6 if ':' in dst else socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.connect((dst, port))
+        except socket.error, e:
+            print "Error: %s" % repr(e)
+            exit(1)
 
-#import code
-#code.interact(local=locals())
+class SendKeys(PtyClient):
+    def __init__(self):
+        pass
+
+    def run(self, args):
+        self.connect(args.ip, args.port)
+        for k in args.keys:
+            self.send_key(k, args.expand)
+
+    def send_key(self, key, expand=True):
+        if expand:
+            if key.startswith("C-") and len(key) == 3:
+                k = key[2].upper()
+                if k in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                    key = chr(ord(k) - ord('A') + 1)
+        self.sock.send(key)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--port", dest="port", default=14412)
+    parser.add_argument("-i", "--ip", dest="ip", default="localhost")
+
+    subparsers = parser.add_subparsers(dest="action", title="Action")
+
+    server_parser=subparsers.add_parser('server', help="Server mode")
+    server_parser.add_argument("command", metavar="COMMAND [ARGUMENTS ...]", nargs=argparse.REMAINDER)
+    server_parser.set_defaults(cls=PtyServer)
+
+    sk_parser =subparsers.add_parser('send-keys', help="Send-keys mode")
+    sk_parser.add_argument("-l", help="Disable key name lookup", dest="expand", action="store_const", const=False, default=True)
+    sk_parser.add_argument("keys", metavar="keys [keys ...]", nargs=argparse.REMAINDER)
+    sk_parser.set_defaults(cls=SendKeys)
+
+    args = parser.parse_args()
+    print "%r" % args
+
+    obj = args.cls()
+    obj.run(args)
+
+    sys.exit(0)
