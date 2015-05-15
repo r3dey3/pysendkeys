@@ -176,10 +176,50 @@ class SendKeys(PtyClient):
 
     def send_key(self, key, expand=True):
         if expand:
-            if key.startswith("C-") and len(key) == 3:
-                k = key[2].upper()
+            meta = ""
+            key_up = key.upper()
+            if key_up.startswith("M-"):
+                meta = "\x1b"
+                key = key[2:]
+            if key_up.startswith("C-") and len(key) == 3:
+                k = key_up[2]
                 if k in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
                     key = chr(ord(k) - ord('A') + 1)
+            elif key.startswith("^") and len(key) == 2:
+                k = key_up[1]
+                if k in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                    key = chr(ord(k) - ord('A') + 1)
+            if key_up == "ESCAPE":
+                key = "\x1b"
+            elif key_up == "HOME":
+                key = "\x1b[1~"
+            elif key_up == "END":
+                key = "\x1b[4~"
+            elif key_up == "PGUP": #PPage PageUp
+                key = "\x1b[5~"
+            elif key_up == "PGDN": #NPage PageDown
+                key = "\x1b[6~"
+
+            mapping = {
+                    "BSPACE": "",
+                    "BTAB": "",
+                    "DC": "",  #Delete Char
+                    "ENTER": "",
+                    "IC": "", #Insert Char
+                    "SPACE": "",
+                    "TAB": "",
+                    "ENTER": "",
+                    "UP": "",
+                    "DOWN": "",
+                    "LEFT": "",
+                    "RIGHT": "",
+            }
+            # F1-F20
+            # C-SPACe
+            # C-LEFT C-RIGHT C-DOWN C-UP
+            
+
+            key = meta + key
         self.sock.send(key)
 
 
