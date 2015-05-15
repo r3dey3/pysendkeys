@@ -19,10 +19,11 @@ import struct
 
 KEY_CMD = 1
 START_CMD = 2
-
+LOG = True
 def log(s):
-    with open("log", "a") as f:
-        f.write("%s\n" % str(s))
+    if LOG:
+        with open("log", "a") as f:
+            f.write("%s\n" % str(s))
 
 
 def os_write_all(fd, data):
