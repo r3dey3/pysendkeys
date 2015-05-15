@@ -116,13 +116,13 @@ class PtyServer(object):
         self.client_bufs[conn] = cur_buf
     
     def run(self, args):
-        self.command = args.command
+        self.command = args.command or ["/bin/cat"]
         self.master_fd = None
 
         self._setup()
         self._open_server(args.ip, args.port)
 
-        self.start_process("/bin/cat")
+        self.start_process(self.command)
         try:
             done = False
             while not done:
@@ -200,8 +200,6 @@ if __name__ == "__main__":
     sk_parser.set_defaults(cls=SendKeys)
 
     args = parser.parse_args()
-    print "%r" % args
-
     obj = args.cls()
     obj.run(args)
 
