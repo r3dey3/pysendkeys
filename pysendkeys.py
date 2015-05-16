@@ -98,7 +98,6 @@ class PtyServer(object):
             os.execlp(program[0], *program)
             sys.exit(0)
         self.ep.register(self.master_fd, select.EPOLLIN)
-        log("master = %d" % self.master_fd)
 
 
     def stop_process(self, sig=signal.SIGTERM):
@@ -106,7 +105,6 @@ class PtyServer(object):
         self._close_master()
 
     def kill_process(self, sig=signal.SIGTERM):
-        log("Kill with %d" % sig)
         if self.child_pid is None:
             return
         os.kill(self.child_pid, sig)
@@ -153,8 +151,7 @@ class PtyServer(object):
             try:
                 self._handle_client_command(**unpacked)
             except Exception as e:
-                log("%r" % e)
-                pass
+                log("Exception %r" % e)
 
         self.client_bufs[conn] = cur_buf
 
@@ -219,7 +216,7 @@ class PtyServer(object):
                     else:
                         self._handle_client_data(fd, event)
         except (IOError, OSError) as e:
-            log("ERROR %r" % e)
+            log("Exception %r" % e)
             raise
         finally:
             self._cleanup()
