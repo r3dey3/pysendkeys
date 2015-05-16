@@ -43,7 +43,6 @@ class PtyServer(object):
         self.srv_sock.setblocking(0)
         self.srv_sock.bind((ip, port))
         self.srv_sock.listen(5)
-        log("server fd = %d" % self.srv_sock.fileno())
         self.ep.register(self.srv_sock.fileno(), select.EPOLLIN)
         self.clients = {}
         self.client_bufs = {}
@@ -95,24 +94,41 @@ class PtyServer(object):
         self.client_bufs[conn] = ""
         
 
-    def _handle_client_command(self, command, args):
-        if command == "send-keys":
-            log("sending %r" % args)
-            os_write_all(self.master_fd, args)
-        elif command == "run":
-            self.start_process(args)
+    def _handle_client_command(self, cmd="", **kwargs):
+        log("cmd = %r" % cmd)
+        if cmd == u"send-key":
+            key = kwargs["key"]
+            os_write_all(self.master_fd, key)
+        elif cmd == "run":
+            program = kwargs["program"]
+            self.start_process(*program)
+        elif cmd == "run":
+            self.kill_process(args)
+
 
     def _handle_client_data(self, fd, event):
         conn = self.clients[fd]
         cur_buf = self.client_bufs[conn]
-        new_buf = conn.recv(1)
+        new_buf = conn.recv(4096)
         if new_buf == "":
             self.ep.unregister(fd)
             conn.close()
             return
         cur_buf += new_buf
-        self._handle_client_command("send-keys", cur_buf)
-        cur_buf = ""
+        while True:
+            if len(cur_buf) < 4:
+                break
+            length = struct.unpack_from(">L", cur_buf)[0]
+            if len(cur_buf) < length + 4:
+                break
+            packed = cur_buf[4:4+length]
+            cur_buf = cur_buf[4+length:]
+            unpacked = json.loads(packed)
+            try:
+                self._handle_client_command(**unpacked)
+            except Exception as e:
+                pass
+
         self.client_bufs[conn] = cur_buf
     
     def run(self, args):
@@ -127,24 +143,20 @@ class PtyServer(object):
             done = False
             while not done:
                 events = self.ep.poll()
-                log("Events %r" % events)
                 for fd, event in events:
                     if event == select.EPOLLHUP:
                         done = True
                     if fd == self.master_fd:
                         data = os.read(fd, 4096)
                         os_write_all(pty.STDOUT_FILENO, data)
-                        log("FROM CHILD-> %r"  % data)
                     elif fd == pty.STDIN_FILENO:
                         data = os.read(fd, 4096)
-                        log("TO CHILD-> %r"  % data)
                         if self.master_fd is None:
                             if data == "\x03":
                                 done = True
                         else:
                             os_write_all(self.master_fd, data)
                     elif fd == self.srv_sock.fileno():
-                        log("New client")
                         self._handle_accept()
                     else:
                         self._handle_client_data(fd, event)
@@ -164,6 +176,10 @@ class PtyClient(object):
         except socket.error, e:
             print "Error: %s" % repr(e)
             exit(1)
+    def _send(self, **kwargs):
+        cmd_str = json.dumps(kwargs)
+        hdr = struct.pack(">L", len(cmd_str))
+        self.sock.send(hdr + cmd_str)
 
 class SendKeys(PtyClient):
     def __init__(self):
@@ -220,12 +236,13 @@ class SendKeys(PtyClient):
             
 
             key = meta + key
-        self.sock.send(key)
+        self._send(cmd="send-key", key=key)
+        #self.sock.send(key)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--port", dest="port", default=14412)
+    parser.add_argument("-p", "--port", dest="port", default=14412, help="Port, default=%(default)d")
     parser.add_argument("-i", "--ip", dest="ip", default="localhost")
 
     subparsers = parser.add_subparsers(dest="action", title="Action")
