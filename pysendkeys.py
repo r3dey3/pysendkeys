@@ -155,7 +155,7 @@ class PtyServer(object):
             try:
                 self._handle_client_command(**unpacked)
             except Exception as e:
-                log("Exception %r" % e)
+                log("Exception in handle_client %r" % e)
 
         self.client_bufs[conn] = cur_buf
 
@@ -220,7 +220,7 @@ class PtyServer(object):
                     else:
                         self._handle_client_data(fd, event)
         except (IOError, OSError) as e:
-            log("Exception %r" % e)
+            log("Exception in main %r" % e)
             raise
         finally:
             self._cleanup()
