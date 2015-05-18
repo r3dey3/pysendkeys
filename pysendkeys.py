@@ -121,6 +121,10 @@ class PtyServer(object):
     def _handle_client_command(self, cmd="", **kwargs):
         if cmd == u"send-key":
             key = kwargs["key"]
+            log(key)
+            if self.master_fd is not None:
+                for v in key:
+                    os_write_all(self.master_fd, v)
         elif cmd == u"run":
             program = kwargs["program"]
             self.start_process(program)
