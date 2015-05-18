@@ -191,7 +191,10 @@ class PtyServer(object):
 
             done = False
             while not done:
-                events = self.ep.poll()
+                try:
+                    events = self.ep.poll()
+                except IOError:
+                    continue
                 for fd, event in events:
                     if fd == self.master_fd:
                         try:
