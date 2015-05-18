@@ -56,7 +56,7 @@ class PtyServer(object):
         self.client_bufs = {}
 
     def _handle_sigwinch(self, signum, frame):
-        self.set_pty_size()
+        self._set_pty_size()
 
     def _handle_sigchild(self, signum, frame):
         os.wait()
@@ -80,7 +80,7 @@ class PtyServer(object):
             tty.tcsetattr(pty.STDIN_FILENO, tty.TCSAFLUSH, self.orig_ttymode)
         signal.signal(signal.SIGWINCH, self.old_handler)
 
-    def _set_pty_size():
+    def _set_pty_size(self):
         buf = array.array('h', [0, 0, 0, 0])
         fcntl.ioctl(pty.STDOUT_FILENO, termios.TIOCGWINSZ, buf, True)
         if self.master_fd is not None:
