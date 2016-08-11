@@ -17,6 +17,11 @@ import logging
 
 LOG = True
 
+__all__ = [
+    "PtyServer",
+    "PtyClient"
+]
+
 PORT = 14412
 
 
@@ -123,10 +128,13 @@ class PtyServer(object):
             program = kwargs["program"]
             self.start_process(program)
         elif cmd == u"sigterm":
-            self.kill_process(signal.SIGKILL)
-        elif cmd == u"sigkill":
             self.kill_process(signal.SIGTERM)
-
+        elif cmd == u"sigkill":
+            self.kill_process(signal.SIGKILL)
+        elif cmd == u"sigint":
+            self.kill_process(signal.SIGINT)
+        elif cmd == u"signal":
+            self.kill_process(int(kwargs["signum"]))
 
     def _handle_client_data(self, fd, event):
         conn = self.clients[fd]
@@ -170,8 +178,7 @@ class PtyServer(object):
         self._close_master()
         write_user("Program Exited, press Ctrl+C to exit")
 
-
-    def run(self, args):
+    def __call__(self, args):
         self.program = args.program
         # or ["/bin/cat"]
         self.master_fd = None
@@ -226,7 +233,7 @@ class PtyClient(object):
         self.cmd = cmd
         pass
 
-    def connect(self, dst, port):
+    def connect(self, dst, port=PORT):
         try:
             sock_type = socket.AF_INET6 if ':' in dst else socket.AF_INET
             self.sock = socket.socket(sock_type, socket.SOCK_STREAM)
@@ -240,30 +247,15 @@ class PtyClient(object):
         hdr = struct.pack(">L", len(cmd_str))
         self.sock.send(hdr + cmd_str)
 
-    def run(self, args):
+    def __call__(self, args):
         self.connect(args.ip, args.port)
         self._send(cmd=self.cmd)
 
-class RunProgram(PtyClient):
-    def __init__(self):
-        pass
+    def run(self, program=[]):
+        if isinstance(program, (str, unicode)):
+            program = [program]
 
-    def run(self, args):
-        self.connect(args.ip, args.port)
-
-        if isinstance(args.program, (str, unicode)):
-            args.program = [args.program]
-
-        self._send(cmd="run", program=args.program)
-
-class SendKeys(PtyClient):
-    def __init__(self):
-        pass
-
-    def run(self, args):
-        self.connect(args.ip, args.port)
-        for k in args.keys:
-            self.send_key(k, args.expand)
+        self._send(cmd="run", program=program)
 
     def send_key(self, key, expand=True):
         if expand:
@@ -325,7 +317,36 @@ class SendKeys(PtyClient):
             key = meta + key
 
         self._send(cmd="send-key", key=key)
-        #self.sock.send(key)
+
+    def send_keys(self, keys, expand=True):
+        for k in keys:
+            self.send_key(k, expand)
+
+    def kill(self):
+        self._send(cmd='sigkill')
+
+    def sigterm(self):
+        self._send(cmd='sigterm')
+
+    def sigint(self):
+        self._send(cmd='sigint')
+
+    def signal(self, signum):
+        self._send(cmd='signal', signum=signum)
+
+
+class RunProgram(PtyClient):
+    def __call__(self, args):
+        self.connect(args.ip, args.port)
+        self.run(args.program)
+
+
+class SendKeys(PtyClient):
+    def __call__(self, args):
+        self.connect(args.ip, args.port)
+        self.send_keys(args.keys, args.expand)
+
+
 
 
 if __name__ == "__main__":
@@ -352,6 +373,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     obj = args.cls
-    obj.run(args)
+    obj(args)
 
     sys.exit(0)
