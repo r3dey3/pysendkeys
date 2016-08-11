@@ -360,6 +360,7 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--ip", dest="ip", default="localhost")
 
     subparsers = parser.add_subparsers(dest="action", title="Action")
+    subparsers.required = True
 
     server_parser = subparsers.add_parser('server', help="Server mode")
     server_parser.add_argument("program", metavar="PROGRAM [ARGUMENTS ...]", nargs=argparse.REMAINDER, default=None)
