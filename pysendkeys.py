@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-
-
+#!/usr/bin/env python2
 import array
 import argparse
 import fcntl
@@ -15,15 +13,12 @@ import time
 import socket
 import json
 import struct
+import logging
 
 
 KEY_CMD = 1
 START_CMD = 2
 LOG = True
-def log(s):
-    if LOG:
-        with open("log", "a") as f:
-            f.write("%s\n" % str(s))
 
 
 def os_write_all(fd, data):
@@ -121,7 +116,7 @@ class PtyServer(object):
     def _handle_client_command(self, cmd="", **kwargs):
         if cmd == u"send-key":
             key = kwargs["key"]
-            log(key)
+            logging.debug(key)
             if self.master_fd is not None:
                 for v in key:
                     os_write_all(self.master_fd, v)
@@ -155,7 +150,7 @@ class PtyServer(object):
             try:
                 self._handle_client_command(**unpacked)
             except Exception as e:
-                log("Exception in handle_client %r" % e)
+                logging.debug("Exception in handle_client %r" % e)
 
         self.client_bufs[conn] = cur_buf
 
@@ -223,7 +218,7 @@ class PtyServer(object):
                     else:
                         self._handle_client_data(fd, event)
         except (IOError, OSError) as e:
-            log("Exception in main %r" % e)
+            logging.debug("Exception in main %r" % e)
             raise
         finally:
             self._cleanup()
