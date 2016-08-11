@@ -347,6 +347,11 @@ class SendKeys(PtyClient):
         self.send_keys(args.keys, args.expand)
 
 
+class SendFile(PtyClient):
+    def __call__(self, args):
+        self.connect(args.ip, args.port)
+        data = args.file.read()
+        self.send_keys(data, False)
 
 
 if __name__ == "__main__":
@@ -364,6 +369,10 @@ if __name__ == "__main__":
     sk_parser.add_argument("-l", help="Disable key name lookup", dest="expand", action="store_const", const=False, default=True)
     sk_parser.add_argument("keys", metavar="keys [keys ...]", nargs=argparse.REMAINDER)
     sk_parser.set_defaults(cls=SendKeys())
+
+    sf_parser = subparsers.add_parser('send-file', help="Send-file mode")
+    sf_parser.add_argument("file", metavar="FILENAME", type=file)
+    sf_parser.set_defaults(cls=SendFile())
 
     subparsers.add_parser('sigterm', help="Send program sigterm").set_defaults(cls=PtyClient(cmd="sigterm"))
     subparsers.add_parser('kill', help="Send program kill").set_defaults(cls=PtyClient(cmd="sigkill"))
