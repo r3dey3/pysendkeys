@@ -377,6 +377,8 @@ if __name__ == "__main__":
 
     subparsers.add_parser('sigterm', help="Send program sigterm").set_defaults(cls=PtyClient(cmd="sigterm"))
     subparsers.add_parser('kill', help="Send program kill").set_defaults(cls=PtyClient(cmd="sigkill"))
+    subparsers.add_parser('sigint', help="Send program a sigint").set_defaults(cls=PtyClient(cmd="sigint"))
+
     run_parser = subparsers.add_parser('run', help="Run a new program")
     run_parser.add_argument("program", metavar="PROGRAM [ARGUMENTS ...]", nargs=argparse.REMAINDER, default=None)
     run_parser.set_defaults(cls=RunProgram())
