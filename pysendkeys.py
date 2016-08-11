@@ -267,47 +267,60 @@ class SendKeys(PtyClient):
 
     def send_key(self, key, expand=True):
         if expand:
-            meta = ""
             key_up = key.upper()
+            meta = ""
             if key_up.startswith("M-"):
                 meta = "\x1b"
                 key = key[2:]
-            if key_up.startswith("C-") and len(key) == 3:
-                k = key_up[2]
-                if k in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
-                    key = chr(ord(k) - ord('A') + 1)
-            elif key.startswith("^") and len(key) == 2:
-                k = key_up[1]
-                if k in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
-                    key = chr(ord(k) - ord('A') + 1)
-            if key_up == "ESCAPE":
-                key = "\x1b"
-            elif key_up == "HOME":
-                key = "\x1b[1~"
-            elif key_up == "END":
-                key = "\x1b[4~"
-            elif key_up == "PGUP": #PPage PageUp
-                key = "\x1b[5~"
-            elif key_up == "PGDN": #NPage PageDown
-                key = "\x1b[6~"
-
             mapping = {
-                    "BSPACE": "",
-                    "BTAB": "",
-                    "DC": "",  #Delete Char
-                    "ENTER": "",
-                    "IC": "", #Insert Char
-                    "SPACE": "",
-                    "TAB": "",
-                    "ENTER": "",
-                    "UP": "",
-                    "DOWN": "",
-                    "LEFT": "",
-                    "RIGHT": "",
+                "BSPACE": "\x08",
+                "BS": "\x08",
+                "DEL": "\x1b[3~", "C-DEL": "\x1b[3^",
+                "BTAB": "",
+                "DC": "",  # Delete Char
+                "IC": "",  # Insert Char
+                "SPACE": " ",
+                "C-SPACE": "\x00",
+                "TAB": "\t",
+                "S-TAB": "\x1b[Z",
+                "ENTER": "\n",
+                "UP": "\x1b[A",
+                "DOWN": "\x1b[B",
+                "RIGHT": "\x1b[C",
+                "LEFT": "\x1b[D",
+                "C-UP": "\x1bOa",
+                "C-DOWN": "\x1bOb",
+                "C-RIGHT": "\x1bOc",
+                "C-LEFT": "\x1bOd",
+                "F1": "\x1b[11^", "F2": "\x1b[12^",
+                "F3": "\x1b[13^", "F4": "\x1b[14^",
+                "F5": "\x1b[15^", "F6": "\x1b[17^",
+                "F7": "\x1b[18^", "F8": "\x1b[19^",
+                "F9": "\x1b[20^", "F10": "\x1b[21^",
+                "F11": "\x1b[23^", "F12": "\x1b[24^",
+                "C-F1": "\x1b[11^", "C-F2": "\x1b[12^",
+                "C-F3": "\x1b[13^", "C-F4": "\x1b[14^",
+                "C-F5": "\x1b[15^", "C-F6": "\x1b[17^",
+                "C-F7": "\x1b[18^", "C-F8": "\x1b[19^",
+                "C-F9": "\x1b[20^", "C-F10": "\x1b[21^",
+                "C-F11": "\x1b[23^", "C-F12": "\x1b[24^",
+                "ESCAPE": "\x1b",
+                "HOME": "\x1b[1~", "C-HOME": "\x1b[1^",
+                "END": "\x1b[4~", "C-END": "\x1b[4^",
+                "PGUP": "\x1b[5~", "C-PGUP": "\x1b[5^",
+                "PGDN": "\x1b[6~", "C-PGDN": "\x1b[6^",
             }
-            # F1-F20
-            # C-SPACe
-            # C-LEFT C-RIGHT C-DOWN C-UP
+            try:
+                key = mapping[key_up]
+            except:
+                if key_up.startswith("C-") and len(key) == 3:
+                    k = key_up[2]
+                    if k in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                        key = chr(ord(k) - ord('A') + 1)
+                elif key.startswith("^") and len(key) == 2:
+                    k = key_up[1]
+                    if k in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
+                        key = chr(ord(k) - ord('A') + 1)
 
             key = meta + key
 
