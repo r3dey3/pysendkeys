@@ -15,10 +15,9 @@ import json
 import struct
 import logging
 
-
-KEY_CMD = 1
-START_CMD = 2
 LOG = True
+
+PORT = 14412
 
 
 def os_write_all(fd, data):
@@ -27,8 +26,10 @@ def os_write_all(fd, data):
         n = os.write(fd, data)
         data = data[n:]
 
+
 def write_user(msg):
     sys.stdout.write("\r\n" + "*" * 80 + "\r\n%s\r\n" % str(msg) + "*" * 80 + "\r\n")
+
 
 class PtyServer(object):
     def __init__(self):
@@ -41,7 +42,7 @@ class PtyServer(object):
 
     def _open_server(self, ip, port):
         self.srv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #self.srv_sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        #  self.srv_sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
         self.srv_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.srv_sock.setblocking(0)
         self.srv_sock.bind((ip, port))
@@ -94,7 +95,6 @@ class PtyServer(object):
             sys.exit(0)
         self.ep.register(self.master_fd, select.EPOLLIN)
 
-
     def stop_process(self, sig=signal.SIGTERM):
         self.kill_process()
         self._close_master()
@@ -103,7 +103,6 @@ class PtyServer(object):
         if self.child_pid is None:
             return
         os.kill(self.child_pid, sig)
-
 
     def _handle_accept(self):
         conn, addr = self.srv_sock.accept()
@@ -165,7 +164,6 @@ class PtyServer(object):
         self.master_fd = None
         self.child_pid = None
 
-
     def _handle_bad_master(self):
         if self.master_fd is None:
             return
@@ -177,7 +175,6 @@ class PtyServer(object):
         self.program = args.program
         # or ["/bin/cat"]
         self.master_fd = None
-
 
         try:
             self._setup()
@@ -223,6 +220,7 @@ class PtyServer(object):
         finally:
             self._cleanup()
 
+
 class PtyClient(object):
     def __init__(self, cmd=""):
         self.cmd = cmd
@@ -230,10 +228,11 @@ class PtyClient(object):
 
     def connect(self, dst, port):
         try:
-            self.sock = socket.socket(socket.AF_INET6 if ':' in dst else socket.AF_INET, socket.SOCK_STREAM)
+            sock_type = socket.AF_INET6 if ':' in dst else socket.AF_INET
+            self.sock = socket.socket(sock_type, socket.SOCK_STREAM)
             self.sock.connect((dst, port))
-        except socket.error, e:
-            print "Error: %s" % repr(e)
+        except socket.error as e:
+            print("Error: %s" % repr(e))
             exit(1)
 
     def _send(self, **kwargs):
@@ -311,22 +310,23 @@ class SendKeys(PtyClient):
             # C-LEFT C-RIGHT C-DOWN C-UP
 
             key = meta + key
+
         self._send(cmd="send-key", key=key)
         #self.sock.send(key)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--port", dest="port", default=14412, help="Port, default=%(default)d")
+    parser.add_argument("-p", "--port", dest="port", default=PORT, type=int, help="Port, default=%(default)d")
     parser.add_argument("-i", "--ip", dest="ip", default="localhost")
 
     subparsers = parser.add_subparsers(dest="action", title="Action")
 
-    server_parser=subparsers.add_parser('server', help="Server mode")
+    server_parser = subparsers.add_parser('server', help="Server mode")
     server_parser.add_argument("program", metavar="PROGRAM [ARGUMENTS ...]", nargs=argparse.REMAINDER, default=None)
     server_parser.set_defaults(cls=PtyServer())
 
-    sk_parser =subparsers.add_parser('send-keys', help="Send-keys mode")
+    sk_parser = subparsers.add_parser('send-keys', help="Send-keys mode")
     sk_parser.add_argument("-l", help="Disable key name lookup", dest="expand", action="store_const", const=False, default=True)
     sk_parser.add_argument("keys", metavar="keys [keys ...]", nargs=argparse.REMAINDER)
     sk_parser.set_defaults(cls=SendKeys())
@@ -335,7 +335,6 @@ if __name__ == "__main__":
     subparsers.add_parser('kill', help="Send program kill").set_defaults(cls=PtyClient(cmd="sigkill"))
     run_parser = subparsers.add_parser('run', help="Run a new program")
     run_parser.add_argument("program", metavar="PROGRAM [ARGUMENTS ...]", nargs=argparse.REMAINDER, default=None)
-
     run_parser.set_defaults(cls=RunProgram())
 
     args = parser.parse_args()
