@@ -116,14 +116,26 @@ class PtyServer(object):
         self.clients[conn.fileno()] = conn
         self.client_bufs[conn] = ""
 
+    def _send_buf(self, buf):
+        CHUNK_SIZE = 1024
+        if len(buf) <= CHUNK_SIZE:
+            os_write_all(self.master_fd, buf)
+        else:
+            for i in range(0, len(buf), CHUNK_SIZE):
+                os_write_all(self.master_fd, buf[i:i+CHUNK_SIZE])
+                time.sleep(0.1)
 
     def _handle_client_command(self, cmd="", **kwargs):
         if cmd == u"send-key":
             key = kwargs["key"]
             logging.debug(key)
             if self.master_fd is not None:
-                for v in key:
-                    os_write_all(self.master_fd, v)
+                if isinstance(key, (str, unicode, bytes)):
+                    self._send_buf(key)
+                else:
+                    for v in key:
+                        self._send_buf(v)
+
         elif cmd == u"run":
             program = kwargs["program"]
             self.start_process(program)
