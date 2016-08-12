@@ -87,7 +87,7 @@ class PtyServer(object):
         if self.master_fd is not None:
             fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ, buf)
 
-    def start_process(self, program):
+    def start_process(self, program=[]):
         if self.program:
             program = self.program
         if not program:
@@ -222,8 +222,10 @@ class PtyServer(object):
                     elif fd == pty.STDIN_FILENO:
                         data = os.read(fd, 4096)
                         if self.master_fd is None:
-                            if data == "\x03":
+                            if data in  "\x04\x03":
                                 done = True
+                            if data in "\r\n":
+                                self.start_process()
                         else:
                             try:
                                 os_write_all(self.master_fd, data)
