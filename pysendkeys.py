@@ -99,6 +99,7 @@ class PtyServer(object):
             os.execlp(program[0], *program)
             sys.exit(0)
         self.ep.register(self.master_fd, select.EPOLLIN)
+        self._set_pty_size()
 
     def stop_process(self, sig=signal.SIGTERM):
         self.kill_process()
