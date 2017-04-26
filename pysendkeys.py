@@ -19,7 +19,8 @@ LOG = True
 
 __all__ = [
     "PtyServer",
-    "PtyClient"
+    "PtyClient",
+    "FakePtyClient"
 ]
 
 PORT = 14412
@@ -348,6 +349,20 @@ class PtyClient(object):
 
     def signal(self, signum):
         self._send(cmd='signal', signum=signum)
+
+
+class FakePtyClient(PtyClient):
+    def _send(self, *args, **kwargs):
+        pass
+
+    def run(self, *args, **kwargs):
+        pass
+
+    def connect(self, *args):
+        pass
+
+    def send_key(self, *args):
+        pass
 
 
 class RunProgram(PtyClient):
