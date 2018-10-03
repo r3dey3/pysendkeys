@@ -1,0 +1,3 @@
+#!/bin/bash
+
+pysendkeys.py run bash -c "exec $1"
